@@ -28,40 +28,6 @@ function showToast(message, type = 'info') {
     }, 3500)
 }
 
-function TerminalVisual() {
-    return (
-        <div className="hero-visual animate-in-scale">
-            <div className="terminal-card">
-                <div className="terminal-titlebar">
-                    <div className="terminal-dots">
-                        <div className="terminal-dot red" />
-                        <div className="terminal-dot yellow" />
-                        <div className="terminal-dot green" />
-                    </div>
-                    <span className="terminal-status">CONNECTED_01</span>
-                </div>
-                <div className="terminal-body">
-                    <div className="terminal-panel">
-                        <div className="terminal-lines">
-                            <div className="terminal-line" />
-                            <div className="terminal-line" />
-                            <div className="terminal-line" />
-                        </div>
-                    </div>
-                    <div className="terminal-panel">
-                        <div className="terminal-ring-wrap">
-                            <div className="terminal-ring" />
-                        </div>
-                    </div>
-                </div>
-                <div className="terminal-footer">
-                    <div className="terminal-footer-dot" />
-                    <span className="terminal-footer-text">REC</span>
-                </div>
-            </div>
-        </div>
-    )
-}
 
 export default function RecorderPage() {
     const [phase, setPhase] = useState('setup') // setup | recording | preview | uploading | share
@@ -203,32 +169,29 @@ export default function RecorderPage() {
                 <div className="container">
                     {/* Hero — shown only on setup phase */}
                     {isSetup ? (
-                        <section className="hero-section" id="features">
-                            <div className="hero-text animate-in">
-                                <div className="hero-status-pill">
-                                    <span className="hero-status-dot" />
-                                    System Operational
-                                </div>
-                                <h1 className="hero-headline">
-                                    Record. Share.{' '}
-                                    <span className="accent">Instantly.</span>
-                                </h1>
-                                <p className="hero-sub">
-                                    Capture your screen with audio in one click. Get a shareable link in seconds — no installs, no sign-up.
-                                </p>
-                                <div className="hero-actions">
-                                    <button
-                                        className="btn btn-primary btn-lg"
-                                        onClick={() => document.getElementById('recorder-panel')?.scrollIntoView({ behavior: 'smooth' })}
-                                    >
-                                        🔴 Start Recording
-                                    </button>
-                                    <a href="#how-it-works" className="btn btn-secondary btn-lg">
-                                        Watch Demo
-                                    </a>
-                                </div>
+                        <section className="hero-section-centered animate-in" id="features">
+                            {/* <div className="hero-status-pill">
+                                <span className="hero-status-dot" />
+                                System Operational
+                            </div> */}
+                            <h1 className="hero-headline">
+                                Record. Share.{' '}
+                                <span className="accent">Instantly.</span>
+                            </h1>
+                            <p className="hero-sub">
+                                Capture your screen with audio in one click. Get a shareable link in seconds — no installs, no sign-up.
+                            </p>
+                            <div className="hero-actions" style={{ justifyContent: 'center' }}>
+                                <button
+                                    className="btn btn-primary btn-lg"
+                                    onClick={() => document.getElementById('recorder-panel')?.scrollIntoView({ behavior: 'smooth' })}
+                                >
+                                    🔴 Start Recording
+                                </button>
+                                <a href="#how-it-works" className="btn btn-secondary btn-lg">
+                                    How it works
+                                </a>
                             </div>
-                            <TerminalVisual />
                         </section>
                     ) : (
                         <section style={{ padding: '48px 0 32px', textAlign: 'center' }}>
@@ -289,7 +252,7 @@ export default function RecorderPage() {
             </main>
             <footer className="footer">
                 <div className="container">
-                    <p>Built with ❤️ using the Web Screen Capture API</p>
+                    <p>Built by team Non Certified Coders</p>
                 </div>
             </footer>
         </div>

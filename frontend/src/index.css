@@ -905,6 +905,14 @@ body,
   align-items: center;
 }
 
+.hero-section-centered {
+  padding: 72px 0 48px;
+  text-align: center;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+}
+
 .hero-text {
   text-align: left;
 }
@@ -963,9 +971,9 @@ body,
 .hero-sub {
   font-size: 17px;
   color: var(--text-secondary);
-  max-width: 420px;
+  max-width: 520px;
   line-height: 1.7;
-  margin-bottom: 36px;
+  margin: 0 auto 36px;
   font-weight: 400;
 }
 
