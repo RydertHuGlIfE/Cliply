@@ -46,7 +46,7 @@ export default function SetupPanel({ onStart }) {
                     className="btn btn-primary btn-lg"
                     onClick={() => onStart({ useMic, useSystemAudio })}
                 >
-                    <span>🔴</span> Start Recording
+                    🔴 Start Recording
                 </button>
                 <p className="text-secondary mt-12" style={{ fontSize: 13 }}>
                     You'll be prompted to choose a screen, window, or tab

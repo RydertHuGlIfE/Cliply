@@ -121,7 +121,7 @@ export default function ViewerPage() {
     }
 
     const rightSlot = (
-        <Link to="/" className="btn btn-secondary btn-sm">🔴 New Recording</Link>
+        <Link to="/" className="btn btn-primary btn-sm">🔴 New Recording</Link>
     )
 
     return (

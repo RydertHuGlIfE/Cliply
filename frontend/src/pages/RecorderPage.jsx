@@ -10,7 +10,6 @@ import { startRecording, stopRecording, pauseRecording, resumeRecording } from '
 import { uploadBlob } from '../modules/uploader'
 
 // State machine: setup → recording → preview → uploading → share
-const STEPS = { SETUP: 1, RECORDING: 2, PREVIEW: 2, UPLOADING: 3, SHARE: 3 }
 const STEP_NUM = { setup: 1, recording: 2, preview: 2, uploading: 3, share: 3 }
 
 function showToast(message, type = 'info') {
@@ -27,6 +26,41 @@ function showToast(message, type = 'info') {
         toast.style.transition = 'all 0.3s ease'
         setTimeout(() => toast.remove(), 300)
     }, 3500)
+}
+
+function TerminalVisual() {
+    return (
+        <div className="hero-visual animate-in-scale">
+            <div className="terminal-card">
+                <div className="terminal-titlebar">
+                    <div className="terminal-dots">
+                        <div className="terminal-dot red" />
+                        <div className="terminal-dot yellow" />
+                        <div className="terminal-dot green" />
+                    </div>
+                    <span className="terminal-status">CONNECTED_01</span>
+                </div>
+                <div className="terminal-body">
+                    <div className="terminal-panel">
+                        <div className="terminal-lines">
+                            <div className="terminal-line" />
+                            <div className="terminal-line" />
+                            <div className="terminal-line" />
+                        </div>
+                    </div>
+                    <div className="terminal-panel">
+                        <div className="terminal-ring-wrap">
+                            <div className="terminal-ring" />
+                        </div>
+                    </div>
+                </div>
+                <div className="terminal-footer">
+                    <div className="terminal-footer-dot" />
+                    <span className="terminal-footer-text">REC</span>
+                </div>
+            </div>
+        </div>
+    )
 }
 
 export default function RecorderPage() {
@@ -58,10 +92,10 @@ export default function RecorderPage() {
     useEffect(() => () => stopTimer(), [])
 
     const statusMap = {
-        setup: { label: 'Ready', type: 'idle' },
+        setup: { label: 'System Operational', type: 'idle' },
         recording: { label: 'Recording', type: 'recording' },
-        preview: { label: 'Preview', type: 'idle' },
-        uploading: { label: 'Uploading', type: 'idle' },
+        preview: { label: 'Preview Ready', type: 'idle' },
+        uploading: { label: 'Uploading...', type: 'idle' },
         share: { label: 'Shared!', type: 'ready' },
     }
 
@@ -160,33 +194,55 @@ export default function RecorderPage() {
         setPhase('setup')
     }, [blobUrl])
 
+    const isSetup = phase === 'setup'
+
     return (
         <div>
             <Header status={statusMap[phase]} />
             <main>
                 <div className="container">
-                    {/* Hero */}
-                    <section style={{ padding: '64px 0 40px', textAlign: 'center' }}>
-                        <div style={{
-                            display: 'inline-flex', alignItems: 'center', gap: 8,
-                            padding: '6px 14px', background: 'rgba(139,92,246,0.1)',
-                            border: '1px solid rgba(139,92,246,0.25)', borderRadius: 20,
-                            fontSize: 13, fontWeight: 500, color: 'var(--accent-purple)', marginBottom: 24
-                        }}>
-                            ✨ No installation required
-                        </div>
-                        <h1 style={{ fontSize: 'clamp(36px,6vw,56px)', fontWeight: 800, lineHeight: 1.1, letterSpacing: '-1.5px', marginBottom: 16 }}>
-                            Record. Share.{' '}
-                            <span style={{ background: 'var(--gradient)', WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent', backgroundClip: 'text' }}>
-                                Instantly.
-                            </span>
-                        </h1>
-                        <p style={{ fontSize: 18, color: 'var(--text-secondary)', maxWidth: 480, margin: '0 auto 40px', lineHeight: 1.7 }}>
-                            Capture your screen with audio in one click. Get a shareable link in seconds.
-                        </p>
-                    </section>
+                    {/* Hero — shown only on setup phase */}
+                    {isSetup ? (
+                        <section className="hero-section" id="features">
+                            <div className="hero-text animate-in">
+                                <div className="hero-status-pill">
+                                    <span className="hero-status-dot" />
+                                    System Operational
+                                </div>
+                                <h1 className="hero-headline">
+                                    Record. Share.{' '}
+                                    <span className="accent">Instantly.</span>
+                                </h1>
+                                <p className="hero-sub">
+                                    Capture your screen with audio in one click. Get a shareable link in seconds — no installs, no sign-up.
+                                </p>
+                                <div className="hero-actions">
+                                    <button
+                                        className="btn btn-primary btn-lg"
+                                        onClick={() => document.getElementById('recorder-panel')?.scrollIntoView({ behavior: 'smooth' })}
+                                    >
+                                        🔴 Start Recording
+                                    </button>
+                                    <a href="#how-it-works" className="btn btn-secondary btn-lg">
+                                        Watch Demo
+                                    </a>
+                                </div>
+                            </div>
+                            <TerminalVisual />
+                        </section>
+                    ) : (
+                        <section style={{ padding: '48px 0 32px', textAlign: 'center' }}>
+                            <h1 style={{ fontSize: 'clamp(28px,4vw,40px)', fontWeight: 900, letterSpacing: '-1px', marginBottom: 8 }}>
+                                {phase === 'recording' && <><span className="accent">Recording</span> in progress</>}
+                                {phase === 'preview' && <>Review your <span className="accent">recording</span></>}
+                                {phase === 'uploading' && <>Uploading your <span className="accent">clip</span>...</>}
+                                {phase === 'share' && <>Your clip is <span className="accent">live!</span></>}
+                            </h1>
+                        </section>
+                    )}
 
-                    <div style={{ maxWidth: 680, margin: '0 auto' }}>
+                    {/* Recorder panel */}
+                    <div id="recorder-panel" style={{ maxWidth: 680, margin: '0 auto' }}>
                         <StepIndicator current={STEP_NUM[phase]} />
 
                         {phase === 'setup' && <SetupPanel onStart={handleStart} />}
@@ -211,22 +267,24 @@ export default function RecorderPage() {
                     </div>
 
                     {/* How it works */}
-                    <div style={{ maxWidth: 680, margin: '48px auto 0' }}>
-                        <p className="section-title text-center mb-24">How it works</p>
-                        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3,1fr)', gap: 16 }}>
-                            {[
-                                { icon: '🖥️', title: 'Select Screen', desc: 'Choose any screen, window, or browser tab' },
-                                { icon: '⚡', title: 'Instant Upload', desc: 'Recording uploads automatically when done' },
-                                { icon: '🔗', title: 'Share Link', desc: 'One-click copy of your shareable link' },
-                            ].map(({ icon, title, desc }) => (
-                                <div key={title} className="card text-center" style={{ padding: '20px 16px' }}>
-                                    <div style={{ fontSize: 28, marginBottom: 10 }}>{icon}</div>
-                                    <div style={{ fontSize: 14, fontWeight: 600, marginBottom: 6 }}>{title}</div>
-                                    <div style={{ fontSize: 12, color: 'var(--text-secondary)' }}>{desc}</div>
-                                </div>
-                            ))}
+                    {isSetup && (
+                        <div className="how-it-works" id="how-it-works">
+                            <p className="how-it-works-title">How it works</p>
+                            <div className="how-it-works-grid">
+                                {[
+                                    { icon: '🖥️', title: 'Select Screen', desc: 'Choose any screen, window, or browser tab to capture' },
+                                    { icon: '⚡', title: 'Instant Upload', desc: 'Recording uploads automatically when you stop' },
+                                    { icon: '🔗', title: 'Share Link', desc: 'One-click copy of your password-protected shareable link' },
+                                ].map(({ icon, title, desc }) => (
+                                    <div key={title} className="how-card">
+                                        <div className="how-card-icon">{icon}</div>
+                                        <div className="how-card-title">{title}</div>
+                                        <div className="how-card-desc">{desc}</div>
+                                    </div>
+                                ))}
+                            </div>
                         </div>
-                    </div>
+                    )}
                 </div>
             </main>
             <footer className="footer">
