@@ -1,5 +1,4 @@
 import { useState, useEffect, useRef, useCallback } from 'react'
-import Header from '../components/Header'
 import StepIndicator from '../components/StepIndicator'
 import SetupPanel from '../components/SetupPanel'
 import RecordingPanel from '../components/RecordingPanel'
@@ -9,8 +8,26 @@ import SharePanel from '../components/SharePanel'
 import { startRecording, stopRecording, pauseRecording, resumeRecording } from '../modules/recorder'
 import { uploadBlob } from '../modules/uploader'
 
-// State machine: setup → recording → preview → uploading → share
+// Zenith Components
+import Navbar from '../components/zenith/Navbar'
+import Hero from '../components/zenith/Hero'
+import Services from '../components/zenith/Services'
+import Work from '../components/zenith/Work'
+import Testimonials from '../components/zenith/Testimonials'
+import Contact from '../components/zenith/Contact'
+import Footer from '../components/zenith/Footer'
+
+// Annotation
+import FloatingBar from '../components/FloatingBar'
+import { CanvasCompositor } from '../modules/compositor'
+
 const STEP_NUM = { setup: 1, recording: 2, preview: 2, uploading: 3, share: 3 }
+
+const formatTime = (seconds) => {
+    const mins = Math.floor(seconds / 60)
+    const secs = seconds % 60
+    return `${mins.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}`
+}
 
 function showToast(message, type = 'info') {
     const existing = document.querySelector('.toast')
@@ -28,9 +45,8 @@ function showToast(message, type = 'info') {
     }, 3500)
 }
 
-
 export default function RecorderPage() {
-    const [phase, setPhase] = useState('setup') // setup | recording | preview | uploading | share
+    const [phase, setPhase] = useState('setup')
     const [isPaused, setIsPaused] = useState(false)
     const [elapsed, setElapsed] = useState(0)
     const [blobUrl, setBlobUrl] = useState(null)
@@ -40,6 +56,15 @@ export default function RecorderPage() {
     const [uploadTotal, setUploadTotal] = useState(0)
     const [shareUrl, setShareUrl] = useState('')
     const [sharePassword, setSharePassword] = useState('')
+
+    // SYS_SYNC State
+    const [syncRate, setSyncRate] = useState(0);
+
+    // Drawing State
+    const [isDrawingToolsVisible, setIsDrawingToolsVisible] = useState(false)
+    const [activeTool, setActiveTool] = useState('cursor')
+    const [activeColor, setActiveColor] = useState('#ef4444')
+    const compositorRef = useRef(null)
 
     const timerRef = useRef(null)
 
@@ -55,20 +80,27 @@ export default function RecorderPage() {
         timerRef.current = null
     }
 
-    useEffect(() => () => stopTimer(), [])
+    useEffect(() => {
+        const i = setInterval(() => {
+            setSyncRate(prev => prev + 0.05);
+        }, 10);
+        return () => {
+            clearInterval(i);
+            stopTimer();
+        }
+    }, []);
 
-    const statusMap = {
-        setup: { label: 'System Operational', type: 'idle' },
-        recording: { label: 'Recording', type: 'recording' },
-        preview: { label: 'Preview Ready', type: 'idle' },
-        uploading: { label: 'Uploading...', type: 'idle' },
-        share: { label: 'Shared!', type: 'ready' },
-    }
+    const handleStart = useCallback(async (opts = { useMic: true, useSystemAudio: true }) => {
+        const { useMic, useSystemAudio } = opts;
 
-    const handleStart = useCallback(async ({ useMic, useSystemAudio }) => {
+        // Initialize Compositor
+        const compositor = new CanvasCompositor(1920, 1080)
+        compositorRef.current = compositor
+
         const result = await startRecording({
             useMic,
             useSystemAudio,
+            compositor: compositor,
             onChunk: () => { },
             onStop: (recordedBlob) => {
                 const url = URL.createObjectURL(recordedBlob)
@@ -76,10 +108,14 @@ export default function RecorderPage() {
                 setBlob(recordedBlob)
                 stopTimer()
                 setPhase('preview')
+                setIsDrawingToolsVisible(false)
+                compositor.stop()
             },
             onError: (err) => {
                 stopTimer()
                 setPhase('setup')
+                setIsDrawingToolsVisible(false)
+                compositor.stop()
                 if (err.name === 'NotAllowedError') {
                     showToast('Screen capture permission denied', 'error')
                 } else {
@@ -90,9 +126,10 @@ export default function RecorderPage() {
         if (result) {
             setPhase('recording')
             setIsPaused(false)
+            setIsDrawingToolsVisible(true)
             startTimer()
             if (result.warning === 'system_audio_missing') {
-                showToast('System audio missing. Try sharing a "Tab" instead of "Entire Screen".', 'error')
+                showToast('System audio missing. Tab sharing is recommended for audio.', 'error')
             }
         }
     }, [])
@@ -120,6 +157,7 @@ export default function RecorderPage() {
         setPhase('setup')
         setElapsed(0)
         setIsPaused(false)
+        setIsDrawingToolsVisible(false)
     }, [])
 
     const handleUpload = useCallback(async () => {
@@ -160,101 +198,103 @@ export default function RecorderPage() {
         setPhase('setup')
     }, [blobUrl])
 
+    const handlePointerDown = (e) => {
+        if (!compositorRef.current || activeTool === 'cursor') return
+        const x = (e.clientX / window.innerWidth) * 1920
+        const y = (e.clientY / window.innerHeight) * 1080
+        compositorRef.current.startStroke(x, y, activeColor, 4)
+    }
+
+    const handlePointerMove = (e) => {
+        if (!compositorRef.current || activeTool === 'cursor') return
+        const x = (e.clientX / window.innerWidth) * 1920
+        const y = (e.clientY / window.innerHeight) * 1080
+        compositorRef.current.moveStroke(x, y)
+    }
+
+    const handlePointerUp = () => {
+        compositorRef.current?.endStroke()
+    }
+
     const isSetup = phase === 'setup'
 
     return (
-        <div>
-            <Header status={statusMap[phase]} />
-            <main>
-                <div className="container">
-                    {/* Hero — shown only on setup phase */}
-                    {isSetup ? (
-                        <section className="hero-section-centered animate-in" id="features">
-                            {/* <div className="hero-status-pill">
-                                <span className="hero-status-dot" />
-                                System Operational
-                            </div> */}
-                            <h1 className="hero-headline">
-                                Record. Share.{' '}
-                                <span className="accent">Instantly.</span>
-                            </h1>
-                            <p className="hero-sub">
-                                Capture your screen with audio in one click. Get a shareable link in seconds — no installs, no sign-up.
-                            </p>
-                            <div className="hero-actions" style={{ justifyContent: 'center' }}>
-                                <button
-                                    className="btn btn-primary btn-lg"
-                                    onClick={() => handleStart({ useMic: true, useSystemAudio: true })}
-                                >
-                                    🔴 Start Recording
-                                </button>
-                                <button href="#how-it-works" className="btn btn-secondary btn-lg" onClick={() => document.getElementById('recorder-panel')?.scrollIntoView({ behavior: 'smooth' })}>
-                                    How it works
-                                </button>
-                            </div>
-                        </section>
-                    ) : (
-                        <section style={{ padding: '48px 0 32px', textAlign: 'center' }}>
-                            <h1 style={{ fontSize: 'clamp(28px,4vw,40px)', fontWeight: 900, letterSpacing: '-1px', marginBottom: 8 }}>
-                                {phase === 'recording' && <><span className="accent">Recording</span> in progress</>}
-                                {phase === 'preview' && <>Review your <span className="accent">recording</span></>}
-                                {phase === 'uploading' && <>Uploading your <span className="accent">clip</span>...</>}
-                                {phase === 'share' && <>Your clip is <span className="accent">live!</span></>}
-                            </h1>
-                        </section>
-                    )}
+        <div className="bg-black text-white font-manrope min-h-screen">
+            <Navbar onStartNow={() => handleStart()} />
 
-                    {/* Recorder panel */}
-                    <div id="recorder-panel" style={{ maxWidth: 680, margin: '0 auto' }}>
-                        <StepIndicator current={STEP_NUM[phase]} />
+            <div className="fixed top-24 right-6 z-50 bg-[#ccfa00] text-black font-bold font-mono px-4 py-2 rounded-none skew-x-[-12deg] pointer-events-none min-w-[180px] text-right">
+                {phase === 'recording' ? `REC_UPTIME: ${formatTime(elapsed)}` : `SYS_HEARTBEAT: ${syncRate.toFixed(2)} MS`}
+            </div>
 
-                        {phase === 'setup' && <SetupPanel onStart={handleStart} />}
-                        {phase === 'recording' && (
-                            <RecordingPanel
-                                elapsed={elapsed}
-                                isPaused={isPaused}
-                                onStop={handleStop}
-                                onPause={handlePause}
-                                onCancel={handleCancel}
-                            />
-                        )}
-                        {phase === 'preview' && (
-                            <PreviewPanel blobUrl={blobUrl} onUpload={handleUpload} onReRecord={handleReRecord} />
-                        )}
-                        {phase === 'uploading' && (
-                            <UploadPanel progress={uploadProgress} loaded={uploadLoaded} total={uploadTotal} />
-                        )}
-                        {phase === 'share' && (
-                            <SharePanel shareUrl={shareUrl} password={sharePassword} onNewRecording={handleNewRecording} />
-                        )}
+            {/* Drawing Overlay */}
+            {isDrawingToolsVisible && activeTool !== 'cursor' && (
+                <div
+                    style={{
+                        position: 'fixed', inset: 0, zIndex: 1000, cursor: 'crosshair',
+                        touchAction: 'none'
+                    }}
+                    onPointerDown={handlePointerDown}
+                    onPointerMove={handlePointerMove}
+                    onPointerUp={handlePointerUp}
+                    onPointerLeave={handlePointerUp}
+                />
+            )}
+
+            {/* Floating Bar */}
+            {isDrawingToolsVisible && (
+                <FloatingBar
+                    onToolChange={setActiveTool}
+                    onColorChange={setActiveColor}
+                />
+            )}
+
+            <main className="flex flex-col gap-0 overflow-x-hidden">
+                {isSetup ? (
+                    <>
+                        <Hero onStartRecording={handleStart} />
+                        <Services delta={syncRate} />
+                        <Work />
+                        <Testimonials />
+                        <Contact />
+                    </>
+                ) : (
+                    <div className="pt-32 pb-20 px-6 max-w-7xl mx-auto w-full relative z-[2001]">
+                        <h1 className="text-7xl font-bold font-teko mb-8 text-center uppercase italic">
+                            {phase === 'recording' && <><span className="text-[#ccfa00]">Recording</span> in progress</>}
+                            {phase === 'preview' && <>Review your <span className="text-[#ccfa00]">recording</span></>}
+                            {phase === 'uploading' && <>Uploading your <span className="text-[#ccfa00]">clip</span>...</>}
+                            {phase === 'share' && <>Your clip is <span className="text-[#ccfa00]">live!</span></>}
+                        </h1>
                     </div>
+                )}
 
-                    {/* How it works */}
-                    {isSetup && (
-                        <div className="how-it-works" id="how-it-works">
-                            <p className="how-it-works-title">How it works</p>
-                            <div className="how-it-works-grid">
-                                {[
-                                    { icon: '🖥️', title: 'Select Screen', desc: 'Choose any screen, window, or browser tab to capture' },
-                                    { icon: '⚡', title: 'Instant Upload', desc: 'Recording uploads automatically when you stop' },
-                                    { icon: '🔗', title: 'Share Link', desc: 'One-click copy of your password-protected shareable link' },
-                                ].map(({ icon, title, desc }) => (
-                                    <div key={title} className="how-card">
-                                        <div className="how-card-icon">{icon}</div>
-                                        <div className="how-card-title">{title}</div>
-                                        <div className="how-card-desc">{desc}</div>
-                                    </div>
-                                ))}
-                            </div>
-                        </div>
+                {/* Recorder Panel */}
+                <div id="recorder-panel" className="relative z-[2001] w-full max-w-4xl mx-auto px-6 mb-32">
+                    <StepIndicator current={STEP_NUM[phase]} />
+
+                    {phase === 'setup' && <SetupPanel onStart={handleStart} />}
+                    {phase === 'recording' && (
+                        <RecordingPanel
+                            elapsed={elapsed}
+                            isPaused={isPaused}
+                            onStop={handleStop}
+                            onPause={handlePause}
+                            onCancel={handleCancel}
+                        />
+                    )}
+                    {phase === 'preview' && (
+                        <PreviewPanel blobUrl={blobUrl} onUpload={handleUpload} onReRecord={handleReRecord} />
+                    )}
+                    {phase === 'uploading' && (
+                        <UploadPanel progress={uploadProgress} loaded={uploadLoaded} total={uploadTotal} />
+                    )}
+                    {phase === 'share' && (
+                        <SharePanel shareUrl={shareUrl} password={sharePassword} onNewRecording={handleNewRecording} />
                     )}
                 </div>
             </main>
-            <footer className="footer">
-                <div className="container">
-                    <p>Built by team Non Certified Coders</p>
-                </div>
-            </footer>
+
+            <Footer />
         </div>
     )
 }

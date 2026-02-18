@@ -1223,3 +1223,53 @@ body,
     font-size: 14px;
   }
 }
+
+/* ─── Annotation Tools ───────────────────────────────────── */
+.floating-bar {
+  display: flex;
+  gap: 12px;
+  padding: 8px 16px;
+  background: #111827;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 8px;
+  box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.3);
+  position: fixed;
+  bottom: 32px;
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: 2000;
+  align-items: center;
+}
+
+.bar-tool {
+  padding: 8px;
+  border-radius: 8px;
+  background: transparent;
+  color: #9ca3af;
+  border: none;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.bar-tool.active {
+  background: #ccfa00;
+  color: black;
+}
+
+.color-dot {
+  width: 20px;
+  height: 20px;
+  border-radius: 50%;
+  border: 2px solid transparent;
+  cursor: pointer;
+}
+
+.color-dot.active {
+  border-color: white;
+}
+
+.divider-v {
+  width: 1px;
+  height: 24px;
+  background: rgba(255, 255, 255, 0.1);
+}
