@@ -18,8 +18,8 @@ import Contact from '../components/zenith/Contact'
 import Footer from '../components/zenith/Footer'
 
 // Annotation
-import FloatingBar from '../components/FloatingBar'
 import { CanvasCompositor } from '../modules/compositor'
+import WebcamOverlay from '../components/WebcamOverlay'
 
 const STEP_NUM = { setup: 1, recording: 2, preview: 2, uploading: 3, share: 3 }
 
@@ -60,10 +60,9 @@ export default function RecorderPage() {
     // SYS_SYNC State
     const [syncRate, setSyncRate] = useState(0);
 
-    // Drawing State
-    const [isDrawingToolsVisible, setIsDrawingToolsVisible] = useState(false)
-    const [activeTool, setActiveTool] = useState('cursor')
-    const [activeColor, setActiveColor] = useState('#ef4444')
+    const [webcamStream, setWebcamStream] = useState(null)
+
+    // Drawing State - REMOVED
     const compositorRef = useRef(null)
 
     const timerRef = useRef(null)
@@ -109,13 +108,13 @@ export default function RecorderPage() {
                 setBlob(recordedBlob)
                 stopTimer()
                 setPhase('preview')
-                setIsDrawingToolsVisible(false)
+                setWebcamStream(null)
                 compositor.stop()
             },
             onError: (err) => {
                 stopTimer()
                 setPhase('setup')
-                setIsDrawingToolsVisible(false)
+                setWebcamStream(null)
                 compositor.stop()
                 if (err.name === 'NotAllowedError') {
                     showToast('Screen capture permission denied', 'error')
@@ -127,10 +126,12 @@ export default function RecorderPage() {
         if (result) {
             setPhase('recording')
             setIsPaused(false)
-            setIsDrawingToolsVisible(true)
             startTimer()
             if (result.warning === 'system_audio_missing') {
                 showToast('System audio missing. Tab sharing is recommended for audio.', 'error')
+            }
+            if (result.camStream) {
+                setWebcamStream(result.camStream)
             }
         }
     }, [])
@@ -157,8 +158,9 @@ export default function RecorderPage() {
         stopTimer()
         setPhase('setup')
         setElapsed(0)
+        setElapsed(0)
         setIsPaused(false)
-        setIsDrawingToolsVisible(false)
+        setWebcamStream(null)
     }, [])
 
     const handleUpload = useCallback(async () => {
@@ -199,23 +201,7 @@ export default function RecorderPage() {
         setPhase('setup')
     }, [blobUrl])
 
-    const handlePointerDown = (e) => {
-        if (!compositorRef.current || activeTool === 'cursor') return
-        const x = (e.clientX / window.innerWidth) * 1920
-        const y = (e.clientY / window.innerHeight) * 1080
-        compositorRef.current.startStroke(x, y, activeColor, 4)
-    }
 
-    const handlePointerMove = (e) => {
-        if (!compositorRef.current || activeTool === 'cursor') return
-        const x = (e.clientX / window.innerWidth) * 1920
-        const y = (e.clientY / window.innerHeight) * 1080
-        compositorRef.current.moveStroke(x, y)
-    }
-
-    const handlePointerUp = () => {
-        compositorRef.current?.endStroke()
-    }
 
     const isSetup = phase === 'setup'
 
@@ -227,27 +213,11 @@ export default function RecorderPage() {
                 {phase === 'recording' ? `REC_UPTIME: ${formatTime(elapsed)}` : `SYS_HEARTBEAT: ${syncRate.toFixed(2)} MS`}
             </div>
 
-            {/* Drawing Overlay */}
-            {isDrawingToolsVisible && activeTool !== 'cursor' && (
-                <div
-                    style={{
-                        position: 'fixed', inset: 0, zIndex: 1000, cursor: 'crosshair',
-                        touchAction: 'none'
-                    }}
-                    onPointerDown={handlePointerDown}
-                    onPointerMove={handlePointerMove}
-                    onPointerUp={handlePointerUp}
-                    onPointerLeave={handlePointerUp}
-                />
-            )}
-
-            {/* Floating Bar */}
-            {isDrawingToolsVisible && (
-                <FloatingBar
-                    onToolChange={setActiveTool}
-                    onColorChange={setActiveColor}
-                />
-            )}
+            {
+                phase === 'recording' && webcamStream && (
+                    <WebcamOverlay stream={webcamStream} />
+                )
+            }
 
             <main className="flex flex-col gap-0 overflow-x-hidden">
                 {isSetup ? (
@@ -296,6 +266,6 @@ export default function RecorderPage() {
             </main>
 
             <Footer />
-        </div>
+        </div >
     )
 }

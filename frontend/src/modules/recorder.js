@@ -3,6 +3,7 @@
 let mediaRecorder = null;
 let screenStream = null;
 let micStream = null;
+let camStream = null;
 let stopTimeout = null;
 
 // Persistent state for recovery
@@ -39,7 +40,7 @@ export async function startRecording({ useMic, useSystemAudio, useCamera, compos
 
     try {
         const displayMediaConstraints = {
-            video: { frameRate: 30, width: { ideal: 1920 }, height: { ideal: 1080 } },
+            video: { frameRate: 60, width: { ideal: 1920 }, height: { ideal: 1080 } },
             audio: useSystemAudio ? {
                 echoCancellation: false,
                 noiseSuppression: false,
@@ -64,7 +65,10 @@ export async function startRecording({ useMic, useSystemAudio, useCamera, compos
             }
         }
 
-        let camStream = null;
+        // Module-level scope
+        // Module-level scope
+        // let camStream = null; (Using module scope now)
+
         if (useCamera) {
             try {
                 camStream = await navigator.mediaDevices.getUserMedia({ video: true, audio: false });
@@ -133,7 +137,7 @@ export async function startRecording({ useMic, useSystemAudio, useCamera, compos
         recordedMimeType = getSupportedMimeType(hasAudio);
         console.log('[Recorder] Final stream tracks:', finalStream.getTracks(), 'Mime:', recordedMimeType, 'Has Audio:', hasAudio);
 
-        mediaRecorder = new MediaRecorder(finalStream, { mimeType: recordedMimeType, videoBitsPerSecond: 3_000_000 });
+        mediaRecorder = new MediaRecorder(finalStream, { mimeType: recordedMimeType, videoBitsPerSecond: 20_000_000 });
 
         mediaRecorder.ondataavailable = (e) => {
             if (e.data?.size > 0) {
@@ -167,7 +171,8 @@ export async function startRecording({ useMic, useSystemAudio, useCamera, compos
         console.log('[Recorder] mediaRecorder started. State:', mediaRecorder.state);
         return {
             mimeType: recordedMimeType,
-            warning: (useSystemAudio && !hasAudio && !useMic) ? 'system_audio_missing' : null
+            warning: (useSystemAudio && !hasAudio && !useMic) ? 'system_audio_missing' : null,
+            camStream: camStream
         };
     } catch (err) {
         console.error('[Recorder] Critical error in startRecording:', err);

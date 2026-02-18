@@ -59,6 +59,8 @@ export class CanvasCompositor {
         }
 
         // 2.5 Draw Camera PiP
+        // 2.5 Draw Camera PiP - DISABLED (User prefers WebcamOverlay component)
+        /*
         if (this.camVideo.srcObject && this.camVideo.readyState === this.camVideo.HAVE_ENOUGH_DATA) {
             const camW = 400;
             const camH = (this.camVideo.videoHeight / this.camVideo.videoWidth) * camW;
@@ -76,6 +78,7 @@ export class CanvasCompositor {
                 camH
             );
         }
+        */
 
         // 3. Draw All Strokes on top
         this.ctx.lineCap = 'round';
