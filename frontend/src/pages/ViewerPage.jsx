@@ -58,18 +58,25 @@ export default function ViewerPage() {
             .then(data => {
                 setInfo(data);
                 setStatus('ready');
+
+                // Calculate absolute expiration time
+                // data.created is ISO string, or use data.ttl for relative check
+                // Better: Use Date.now() + ttl * 1000 to sync local timer
                 if (data.ttl) {
-                    setTtl(data.ttl);
+                    const expiryTime = Date.now() + (data.ttl * 1000);
+
+                    // Update timer every second based on difference
                     interval = setInterval(() => {
-                        setTtl(t => {
-                            if (t <= 1) {
-                                clearInterval(interval);
-                                setStatus('notfound'); // Expired!
-                                return 0;
-                            }
-                            return t - 1;
-                        });
+                        const secondsLeft = Math.round((expiryTime - Date.now()) / 1000);
+                        setTtl(secondsLeft);
+
+                        if (secondsLeft <= 0) {
+                            clearInterval(interval);
+                            setStatus('notfound'); // Expired!
+                        }
                     }, 1000);
+                    // Initial set
+                    setTtl(Math.round((expiryTime - Date.now()) / 1000));
                 }
             })
             .catch(() => setStatus('notfound'))
