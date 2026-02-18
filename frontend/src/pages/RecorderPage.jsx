@@ -91,7 +91,7 @@ export default function RecorderPage() {
             setIsPaused(false)
             startTimer()
             if (result.warning === 'system_audio_missing') {
-                showToast('System audio was not selected. Recording video only.', 'error')
+                showToast('System audio missing. Try sharing a "Tab" instead of "Entire Screen".', 'error')
             }
         }
     }, [])

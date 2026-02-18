@@ -38,10 +38,17 @@ export async function startRecording({ useMic, useSystemAudio, onChunk, onStop, 
     onStopCallback = onStop;
 
     try {
-        screenStream = await navigator.mediaDevices.getDisplayMedia({
+        const displayMediaConstraints = {
             video: { frameRate: 30, width: { ideal: 1920 }, height: { ideal: 1080 } },
-            audio: useSystemAudio,
-        });
+            audio: useSystemAudio ? {
+                echoCancellation: false,
+                noiseSuppression: false,
+                autoGainControl: false,
+                sampleRate: 44100,
+            } : false,
+        };
+        console.log('[Recorder] Requesting DisplayMedia with:', displayMediaConstraints);
+        screenStream = await navigator.mediaDevices.getDisplayMedia(displayMediaConstraints);
 
         const audioTracks = [...(screenStream.getAudioTracks())];
         console.log('[Recorder] screenStream tracks:', screenStream.getTracks());
