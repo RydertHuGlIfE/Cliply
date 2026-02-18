@@ -2,55 +2,63 @@ import { useState } from 'react'
 
 export default function SetupPanel({ onStart }) {
     const [useMic, setUseMic] = useState(true)
+    const [useCamera, setUseCamera] = useState(false)
     const [useSystemAudio, setUseSystemAudio] = useState(false)
 
     return (
-        <div className="card animate-in">
-            <div className="flex justify-between items-center mb-24">
-                <h2 style={{ fontSize: 18, fontWeight: 700 }}>Recording Options</h2>
+        <div className="card animate-in border-t-0 p-0 overflow-hidden">
+            <div className="bg-[#ccfa00] text-black px-6 py-2 font-teko text-xl italic font-bold skew-x-[-12deg] inline-block mb-8 ml-6">
+                MODULE_CONFIG
             </div>
 
-            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12, marginBottom: 24 }}>
-                <label className="toggle-group" onClick={() => setUseMic(v => !v)}>
-                    <div className={`toggle-switch ${useMic ? 'on' : ''}`} />
-                    <div>
-                        <div className="toggle-label-title">🎙️ Microphone</div>
-                        <div className="toggle-label-desc">Include your voice</div>
-                    </div>
-                </label>
-
-                <label className="toggle-group" onClick={() => setUseSystemAudio(v => !v)}>
-                    <div className={`toggle-switch ${useSystemAudio ? 'on' : ''}`} />
-                    <div>
-                        <div className="toggle-label-title">🔊 System Audio</div>
-                        <div className="toggle-label-desc">Capture tab/app audio</div>
-                    </div>
-                </label>
-            </div>
-
-            {useSystemAudio && navigator.userAgent.includes('Linux') && (
-                <div className="hint-box mb-24" style={{
-                    background: 'rgba(234, 179, 8, 0.1)',
-                    border: '1px solid rgba(234, 179, 8, 0.2)',
-                    borderRadius: 8,
-                    padding: '8px 12px',
-                    fontSize: 13,
-                    color: '#eab308'
-                }}>
-                    ℹ️ <b>Linux Tip:</b> "Entire Screen" sharing often forces silence. Share a <b>Browser Tab</b> for reliable audio.
+            <div className="px-10 pb-10 pt-4">
+                <div className="flex justify-between items-center mb-10">
+                    <h2 className="font-teko text-4xl uppercase italic">Uplink Options</h2>
                 </div>
-            )}
 
-            <div className="text-center">
-                <button
-                    className="btn btn-primary btn-lg"
-                    onClick={() => onStart({ useMic, useSystemAudio })}
-                >
-                    🔴 Start Recording
-                </button>
-                <p className="text-secondary mt-12" style={{ fontSize: 13 }}>
-                    You'll be prompted to choose a screen, window, or tab
-                </p>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-10">
+                    <label className="toggle-group bg-black/40 border-[#222] hover:border-[#ccfa00]" onClick={() => setUseMic(v => !v)}>
+                        <div className={`toggle-switch ${useMic ? 'on' : ''}`} />
+                        <div>
+                            <div className="toggle-label-title font-teko text-2xl uppercase tracking-tighter">🎙️ Micro-Array</div>
+                            <div className="toggle-label-desc font-mono text-[10px] uppercase opacity-50">Capture proximity audio</div>
+                        </div>
+                    </label>
+
+                    <label className="toggle-group bg-black/40 border-[#222] hover:border-[#ccfa00]" onClick={() => setUseCamera(v => !v)}>
+                        <div className={`toggle-switch ${useCamera ? 'on' : ''}`} />
+                        <div>
+                            <div className="toggle-label-title font-teko text-2xl uppercase tracking-tighter">📷 Neural Optical</div>
+                            <div className="toggle-label-desc font-mono text-[10px] uppercase opacity-50">Overlay biometric feed</div>
+                        </div>
+                    </label>
+
+                    <label className="toggle-group bg-black/40 border-[#222] hover:border-[#ccfa00]" onClick={() => setUseSystemAudio(v => !v)}>
+                        <div className={`toggle-switch ${useSystemAudio ? 'on' : ''}`} />
+                        <div>
+                            <div className="toggle-label-title font-teko text-2xl uppercase tracking-tighter">🔊 Neural Stream</div>
+                            <div className="toggle-label-desc font-mono text-[10px] uppercase opacity-50">Capture internal oscillation</div>
+                        </div>
+                    </label>
+                </div>
+
+                {useSystemAudio && navigator.userAgent.includes('Linux') && (
+                    <div className="mb-10 p-4 border-l-4 border-[#ccfa00] bg-[#ccfa00]/10 font-mono text-xs uppercase text-[#ccfa00]">
+                        [SYS_WARN]: Linux systems require "Browser Tab" selection for neural stream integrity.
+                    </div>
+                )}
+
+                <div className="text-center pt-6 border-t border-white/5">
+                    <button
+                        className="btn btn-primary w-full py-6 text-3xl"
+                        onClick={() => onStart({ useMic, useSystemAudio, useCamera })}
+                    >
+                        Initialize Capture
+                    </button>
+                    <p className="font-mono text-[10px] uppercase opacity-40 mt-6 tracking-[0.2em]">
+                        Waiting for selection handshake...
+                    </p>
+                </div>
             </div>
         </div>
     )

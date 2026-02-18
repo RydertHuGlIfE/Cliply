@@ -90,8 +90,8 @@ export default function RecorderPage() {
         }
     }, []);
 
-    const handleStart = useCallback(async (opts = { useMic: true, useSystemAudio: true }) => {
-        const { useMic, useSystemAudio } = opts;
+    const handleStart = useCallback(async (opts = { useMic: true, useSystemAudio: true, useCamera: false }) => {
+        const { useMic, useSystemAudio, useCamera } = opts;
 
         // Initialize Compositor
         const compositor = new CanvasCompositor(1920, 1080)
@@ -100,6 +100,7 @@ export default function RecorderPage() {
         const result = await startRecording({
             useMic,
             useSystemAudio,
+            useCamera,
             compositor: compositor,
             onChunk: () => { },
             onStop: (recordedBlob) => {

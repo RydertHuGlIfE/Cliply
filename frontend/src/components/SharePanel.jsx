@@ -1,5 +1,4 @@
 import { useState, useRef } from 'react'
-import { useNavigate } from 'react-router-dom'
 
 export default function SharePanel({ shareUrl, password, onNewRecording }) {
     const [copied, setCopied] = useState(false)
@@ -26,60 +25,57 @@ export default function SharePanel({ shareUrl, password, onNewRecording }) {
     }
 
     return (
-        <div className="card animate-in">
-            <div className="text-center">
-                <div style={{
-                    width: 64, height: 64, background: 'rgba(16,185,129,0.15)', border: '1px solid rgba(16,185,129,0.3)',
-                    borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center',
-                    fontSize: 28, margin: '0 auto 20px', animation: 'fadeInScale 0.4s cubic-bezier(0.4,0,0.2,1)'
-                }}>✅</div>
+        <div className="card animate-in border-t-0 p-0 overflow-hidden">
+            <div className="bg-[#ccfa00] text-black px-6 py-2 font-teko text-xl italic font-bold skew-x-[-12deg] inline-block mb-8 ml-6">
+                UPLINK_SUCCESSFUL
+            </div>
 
-                <h3 style={{ fontSize: 22, fontWeight: 700, marginBottom: 8 }}>Your recording is ready!</h3>
-                <p className="text-secondary mb-24" style={{ fontSize: 14 }}>Share this link with anyone</p>
+            <div className="px-10 pb-10">
+                <div className="text-center mb-10">
+                    <div className="font-teko text-6xl uppercase italic text-[#ccfa00] leading-none mb-4">Stream is Live</div>
+                    <p className="font-mono text-xs uppercase opacity-50">Neural data transmission complete.</p>
+                </div>
 
                 {password && (
-                    <div className="mb-24" style={{
-                        background: 'rgba(234, 179, 8, 0.1)',
-                        border: '1px solid rgba(234, 179, 8, 0.2)',
-                        padding: 16, borderRadius: 12, textAlign: 'left'
-                    }}>
-                        <div style={{ fontSize: 11, fontWeight: 700, color: '#ca8a04', marginBottom: 8, textTransform: 'uppercase', letterSpacing: 0.5 }}>
-                            🔒 Password Required
+                    <div className="mb-10 p-6 bg-black border border-[#222] relative overflow-hidden">
+                        <div className="absolute top-0 right-0 bg-[#ccfa00] text-black px-2 py-1 font-teko text-xs skew-x-[-12deg]">
+                            ENCRYPTION_KEY
                         </div>
-                        <div className="flex items-center justify-between gap-12" style={{ background: 'rgba(0,0,0,0.2)', padding: '8px 12px', borderRadius: 8 }}>
-                            <code style={{ fontSize: 20, fontWeight: 700, letterSpacing: 1, fontFamily: 'monospace', color: '#fef08a' }}>
+                        <div className="flex items-center justify-between gap-6 pt-4">
+                            <code className="font-mono text-4xl font-bold tracking-[0.2em] text-[#ccfa00]">
                                 {password}
                             </code>
                             <button
-                                className={`btn btn-sm ${passwordCopied ? 'btn-success' : 'btn-secondary'}`}
+                                className={`btn ${passwordCopied ? 'bg-white text-black' : 'btn-secondary'} !transform-none !skew-x-0`}
                                 onClick={copyPassword}
-                                style={{ fontSize: 12, padding: '4px 10px', height: 32 }}
+                                style={{ padding: '8px 16px' }}
                             >
-                                {passwordCopied ? '✅' : 'Copy'}
+                                {passwordCopied ? 'OK' : 'COPY'}
                             </button>
                         </div>
-                        <div style={{ fontSize: 12, color: 'rgba(255,255,255,0.6)', marginTop: 8 }}>
-                            Video auto-deletes in 15 minutes.
-                        </div>
+                        <p className="font-mono text-[10px] uppercase opacity-40 mt-4 leading-relaxed">
+                            [SECURITY_PROTOCOL]: Clip auto-purges in 15 minutes to prevent data leakage.
+                        </p>
                     </div>
                 )}
 
-                <div className="share-link-box mb-16">
+                <div className="share-link-box mb-10">
                     <input ref={inputRef} type="text" className="share-link-input" value={shareUrl} readOnly />
                     <button
-                        className={`btn btn-sm ${copied ? 'btn-success' : 'btn-primary'}`}
+                        className={`btn ${copied ? 'bg-white text-black' : 'btn-primary'} !transform-none !skew-x-0`}
                         onClick={copyLink}
+                        style={{ padding: '0 24px', height: '100%' }}
                     >
-                        {copied ? '✅ Copied!' : '📋 Copy'}
+                        {copied ? 'COPIED' : 'COPY_LINK'}
                     </button>
                 </div>
 
-                <div className="flex gap-12 justify-center flex-wrap">
-                    <a href={shareUrl} target="_blank" rel="noreferrer" className="btn btn-secondary btn-sm">
-                        ▶ Open Viewer
+                <div className="flex gap-4">
+                    <a href={shareUrl} target="_blank" rel="noreferrer" className="btn btn-secondary flex-1">
+                        VIEW_STREAM
                     </a>
-                    <button className="btn btn-secondary btn-sm" onClick={onNewRecording}>
-                        🔴 New Recording
+                    <button className="btn btn-secondary flex-1" onClick={onNewRecording}>
+                        RESET_MODULE
                     </button>
                 </div>
             </div>

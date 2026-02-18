@@ -29,8 +29,8 @@ export function getSupportedMimeType(hasAudio) {
  * Start recording.
  * @param {{ useMic: boolean, useSystemAudio: boolean, onChunk: (blob: Blob) => void, onStop: (blob: Blob, mimeType: string) => void, onError: (err: Error) => void }} opts
  */
-export async function startRecording({ useMic, useSystemAudio, onChunk, onStop, onError }) {
-    console.log('[Recorder] startRecording', { useMic, useSystemAudio });
+export async function startRecording({ useMic, useSystemAudio, useCamera, compositor, onChunk, onStop, onError }) {
+    console.log('[Recorder] startRecording', { useMic, useSystemAudio, useCamera });
 
     // Reset state
     recordedChunks = [];
@@ -64,7 +64,25 @@ export async function startRecording({ useMic, useSystemAudio, onChunk, onStop, 
             }
         }
 
+        let camStream = null;
+        if (useCamera) {
+            try {
+                camStream = await navigator.mediaDevices.getUserMedia({ video: true, audio: false });
+                console.log('[Recorder] camStream tracks:', camStream.getTracks());
+            } catch (err) {
+                console.warn('[Recorder] camera access denied or failed', err);
+            }
+        }
+
         let finalStream;
+        if (compositor) {
+            // Start compositor with both streams if camera is active
+            const canvasStream = compositor.start(screenStream, camStream);
+            finalStream = new MediaStream([...canvasStream.getVideoTracks()]);
+        } else {
+            finalStream = new MediaStream([...screenStream.getVideoTracks()]);
+        }
+
         if (audioTracks.length > 0) {
             const ctx = new AudioContext();
             const dest = ctx.createMediaStreamDestination();
@@ -106,10 +124,9 @@ export async function startRecording({ useMic, useSystemAudio, onChunk, onStop, 
 
             console.log('[Recorder] AudioContext state:', ctx.state);
 
-            finalStream = new MediaStream([...screenStream.getVideoTracks(), ...dest.stream.getAudioTracks()]);
+            finalStream = new MediaStream([...finalStream.getVideoTracks(), ...dest.stream.getAudioTracks()]);
         } else {
-            // Video only
-            finalStream = new MediaStream([...screenStream.getVideoTracks()]);
+            // Video only - finalStream already has the correct video tracks
         }
 
         const hasAudio = finalStream.getAudioTracks().length > 0;
@@ -215,9 +232,10 @@ export function resumeRecording() {
 
 function _stopStreams() {
     console.log('[Recorder] _stopStreams called');
-    [screenStream, micStream].forEach((s) => s?.getTracks()?.forEach((t) => t.stop()));
+    [screenStream, micStream, camStream].forEach((s) => s?.getTracks()?.forEach((t) => t.stop()));
 
     screenStream = null;
     micStream = null;
+    camStream = null;
     mediaRecorder = null; // Clear recorder ref
 }

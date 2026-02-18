@@ -3,9 +3,9 @@ import React, { useState } from 'react';
 const Work = () => {
     // BUG FIX: Actual Cliply tiers instead of random pricing
     const tiers = [
-        { name: "GUEST", price: "FREE", color: "bg-[#1a1a1a]", features: ["5-Minute Recordings", "Standard Mime Types", "Canvas Annotations", "No Login Required"] },
-        { name: "MEMBER", price: "FREE", color: "bg-[#ccfa00]", text: "text-black", features: ["15-Minute Recordings", "Password Sharing", "Auto-Cleanup", "Persistent Clips"] },
-        { name: "CORE", price: "FREE", color: "bg-[#1a1a1a]", features: ["Infinite Loops", "Biometric Handshake", "Priority Uploads", "Neural Uplink"] }
+        { name: "GUEST", price: "FREE", color: "bg-[#1a1a1a]", features: ["5-Minute Recordings", "Standard Mime Types", "Canvas Annotations", "No Login Required"], buttonText: "Sync Now" },
+        { name: "MEMBER", price: "COMING SOON", color: "bg-[#ccfa00]", text: "text-black", features: ["15-Minute Recordings", "Password Sharing", "Auto-Cleanup", "Persistent Clips"], buttonText: "Coming Soon" },
+        { name: "CORE", price: "COMING SOON", color: "bg-[#1a1a1a]", features: ["Infinite Loops", "Biometric Handshake", "Priority Uploads", "Neural Uplink"], buttonText: "Coming Soon" }
     ];
 
     return (
@@ -41,7 +41,7 @@ const Work = () => {
                 `}
                                 onClick={() => document.getElementById('recorder-panel')?.scrollIntoView({ behavior: 'smooth' })}
                             >
-                                Sync Now
+                                {plan.buttonText}
                             </button>
                         </div>
                     ))}

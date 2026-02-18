@@ -219,6 +219,24 @@ def video_info(video_id):
     })
 
 
+# ── Beta Access ──────────────────────────────────────────────────────────────
+@app.route("/api/beta/signup", methods=["POST"])
+def beta_signup():
+    data = request.json
+    email = data.get("email")
+    
+    if not email:
+        return jsonify({"error": "Email required"}), 400
+        
+    # Log to a local file
+    log_path = os.path.join(os.path.dirname(__file__), "beta_requests.txt")
+    with open(log_path, "a") as f:
+        f.write(f"{time.strftime('%Y-%m-%d %H:%M:%S')} - {email}\n")
+        
+    print(f"[beta] New signup: {email}")
+    return jsonify({"success": True, "message": "UPLINK_ESTABLISHED"})
+
+
 # ── Delete video ───────────────────────────────────────────────────────────────
 @app.route("/video/<video_id>", methods=["DELETE"])
 def delete_video(video_id):

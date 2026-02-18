@@ -15,12 +15,23 @@ export class CanvasCompositor {
         this.video.muted = true;
         this.video.playsInline = true;
 
+        // Camera source
+        this.camVideo = document.createElement('video');
+        this.camVideo.muted = true;
+        this.camVideo.playsInline = true;
+
         this.isActive = false;
     }
 
-    start(stream) {
+    start(stream, camStream = null) {
         this.video.srcObject = stream;
         this.video.play();
+
+        if (camStream) {
+            this.camVideo.srcObject = camStream;
+            this.camVideo.play();
+        }
+
         this.isActive = true;
         this.loop();
 
@@ -31,6 +42,7 @@ export class CanvasCompositor {
     stop() {
         this.isActive = false;
         this.video.srcObject = null;
+        this.camVideo.srcObject = null;
         // clear strokes?
     }
 
@@ -44,6 +56,25 @@ export class CanvasCompositor {
         // 2. Draw Screen Video Frame
         if (this.video.readyState === this.video.HAVE_ENOUGH_DATA) {
             this.ctx.drawImage(this.video, 0, 0, this.canvas.width, this.canvas.height);
+        }
+
+        // 2.5 Draw Camera PiP
+        if (this.camVideo.srcObject && this.camVideo.readyState === this.camVideo.HAVE_ENOUGH_DATA) {
+            const camW = 400;
+            const camH = (this.camVideo.videoHeight / this.camVideo.videoWidth) * camW;
+            const margin = 40;
+
+            // Optional: Draw a border/background for the camera
+            this.ctx.fillStyle = '#ccfa00';
+            this.ctx.fillRect(this.canvas.width - camW - margin - 4, this.canvas.height - camH - margin - 4, camW + 8, camH + 8);
+
+            this.ctx.drawImage(
+                this.camVideo,
+                this.canvas.width - camW - margin,
+                this.canvas.height - camH - margin,
+                camW,
+                camH
+            );
         }
 
         // 3. Draw All Strokes on top

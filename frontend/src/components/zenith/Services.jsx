@@ -50,7 +50,7 @@ const Services = ({ delta = 0 }) => {
         <section
             id="features"
             className="relative py-32 bg-[#050505] overflow-hidden"
-            style={{ transform: `translateX(${delta * 5}px)` }}
+            style={{ transform: `translateX(70px)` }}
         >
             <canvas ref={canvasRef} className="absolute inset-0 opacity-20 pointer-events-none" />
 
@@ -69,7 +69,7 @@ const Services = ({ delta = 0 }) => {
                         { icon: <MousePointer2 />, title: "Annotator", desc: "Draw and highlight in real-time during capture." },
                         { icon: <Layout />, title: "Zero Install", desc: "Runs entirely in your neural... browser." }
                     ].map((item, i) => (
-                        <div key={i} className="bg-[#111] p-10 border border-[#222] hover:border-[#ccfa00] transition-colors group relative overflow-hidden">
+                        <div key={i} className="bg-[#111] p-10 border border-[#222] hover:bg-[#ccfa00] hover:border-[#ccfa00] transition-all duration-300 group relative overflow-hidden">
                             <div className="absolute top-0 right-0 p-4 opacity-10 font-black text-6xl text-white group-hover:text-[#ccfa00] transition-colors font-teko">
                                 0{i + 1}
                             </div>

@@ -6,13 +6,9 @@ export default function Header({ rightSlot, status }) {
             <div className="container">
                 <div className="header-inner">
                     <Link to="/" className="logo">
-                        <div className="logo-icon">🎬</div>
-                        <span className="logo-text">Cliply</span>
                     </Link>
 
                     <nav className="header-nav">
-                        <a href="#features">Features</a>
-                        <a href="#how-it-works">How it works</a>
                     </nav>
 
                     <div className="flex items-center gap-12">
