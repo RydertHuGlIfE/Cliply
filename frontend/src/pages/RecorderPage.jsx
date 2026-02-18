@@ -184,13 +184,13 @@ export default function RecorderPage() {
                             <div className="hero-actions" style={{ justifyContent: 'center' }}>
                                 <button
                                     className="btn btn-primary btn-lg"
-                                    onClick={() => document.getElementById('recorder-panel')?.scrollIntoView({ behavior: 'smooth' })}
+                                    onClick={() => handleStart({ useMic: true, useSystemAudio: true })}
                                 >
                                     🔴 Start Recording
                                 </button>
-                                <a href="#how-it-works" className="btn btn-secondary btn-lg">
+                                <button href="#how-it-works" className="btn btn-secondary btn-lg" onClick={() => document.getElementById('recorder-panel')?.scrollIntoView({ behavior: 'smooth' })}>
                                     How it works
-                                </a>
+                                </button>
                             </div>
                         </section>
                     ) : (
