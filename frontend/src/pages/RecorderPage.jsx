@@ -90,6 +90,9 @@ export default function RecorderPage() {
             setPhase('recording')
             setIsPaused(false)
             startTimer()
+            if (result.warning === 'system_audio_missing') {
+                showToast('System audio was not selected. Recording video only.', 'error')
+            }
         }
     }, [])
 

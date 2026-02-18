@@ -3,11 +3,22 @@
 let mediaRecorder = null;
 let screenStream = null;
 let micStream = null;
+let stopTimeout = null;
 
-export function getSupportedMimeType() {
-    const types = [
+// Persistent state for recovery
+let recordedChunks = [];
+let recordedMimeType = '';
+let onStopCallback = null;
+
+export function getSupportedMimeType(hasAudio) {
+    const types = hasAudio ? [
         'video/webm;codecs=vp9,opus',
         'video/webm;codecs=vp8,opus',
+        'video/webm',
+        'video/mp4',
+    ] : [
+        'video/webm;codecs=vp9',
+        'video/webm;codecs=vp8',
         'video/webm',
         'video/mp4',
     ];
@@ -19,6 +30,13 @@ export function getSupportedMimeType() {
  * @param {{ useMic: boolean, useSystemAudio: boolean, onChunk: (blob: Blob) => void, onStop: (blob: Blob, mimeType: string) => void, onError: (err: Error) => void }} opts
  */
 export async function startRecording({ useMic, useSystemAudio, onChunk, onStop, onError }) {
+    console.log('[Recorder] startRecording', { useMic, useSystemAudio });
+
+    // Reset state
+    recordedChunks = [];
+    recordedMimeType = '';
+    onStopCallback = onStop;
+
     try {
         screenStream = await navigator.mediaDevices.getDisplayMedia({
             video: { frameRate: 30, width: { ideal: 1920 }, height: { ideal: 1080 } },
@@ -26,13 +44,15 @@ export async function startRecording({ useMic, useSystemAudio, onChunk, onStop, 
         });
 
         const audioTracks = [...(screenStream.getAudioTracks())];
+        console.log('[Recorder] screenStream tracks:', screenStream.getTracks());
 
         if (useMic) {
             try {
                 micStream = await navigator.mediaDevices.getUserMedia({ audio: true, video: false });
                 audioTracks.push(...micStream.getAudioTracks());
-            } catch {
-                // mic denied — continue without it
+                console.log('[Recorder] micStream tracks:', micStream.getTracks());
+            } catch (err) {
+                console.warn('[Recorder] mic access denied or failed', err);
             }
         }
 
@@ -46,41 +66,100 @@ export async function startRecording({ useMic, useSystemAudio, onChunk, onStop, 
             finalStream = new MediaStream([...screenStream.getVideoTracks(), ...dest.stream.getAudioTracks()]);
         } else {
             finalStream = new MediaStream([...screenStream.getVideoTracks(), ...audioTracks]);
+            finalStream = new MediaStream([...screenStream.getVideoTracks(), ...audioTracks]);
         }
 
-        const mimeType = getSupportedMimeType();
-        const chunks = [];
+        const hasAudio = finalStream.getAudioTracks().length > 0;
+        recordedMimeType = getSupportedMimeType(hasAudio);
+        console.log('[Recorder] Final stream tracks:', finalStream.getTracks(), 'Mime:', recordedMimeType, 'Has Audio:', hasAudio);
 
-        mediaRecorder = new MediaRecorder(finalStream, { mimeType, videoBitsPerSecond: 3_000_000 });
+        mediaRecorder = new MediaRecorder(finalStream, { mimeType: recordedMimeType, videoBitsPerSecond: 3_000_000 });
 
         mediaRecorder.ondataavailable = (e) => {
             if (e.data?.size > 0) {
-                chunks.push(e.data);
+                recordedChunks.push(e.data);
                 onChunk?.(e.data);
             }
         };
 
         mediaRecorder.onstop = () => {
-            const blob = new Blob(chunks, { type: mimeType });
-            onStop(blob, mimeType);
+            // Validate if we have content
+            console.log('[Recorder] onstop fired. Chunks count:', recordedChunks.length);
+            finishRecording();
+        };
+
+        mediaRecorder.onerror = (e) => {
+            console.error('[Recorder] MediaRecorder error:', e);
+            onError(e.error || new Error('MediaRecorder unknown error'));
         };
 
         // Handle user closing the share dialog
         screenStream.getVideoTracks()[0].onended = () => {
+            console.log('[Recorder] Screen track ended (user stopped share)');
             if (mediaRecorder?.state !== 'inactive') stopRecording();
         };
 
+        if (useSystemAudio && !hasAudio && !useMic) {
+            console.warn('[Recorder] System audio requested but no audio track received. User likely did not select "Share Audio".');
+        }
+
         mediaRecorder.start(1000);
-        return { mimeType };
+        console.log('[Recorder] mediaRecorder started. State:', mediaRecorder.state);
+        return {
+            mimeType: recordedMimeType,
+            warning: (useSystemAudio && !hasAudio && !useMic) ? 'system_audio_missing' : null
+        };
     } catch (err) {
+        console.error('[Recorder] Critical error in startRecording:', err);
         onError(err);
         return null;
     }
 }
 
 export function stopRecording() {
-    if (mediaRecorder && mediaRecorder.state !== 'inactive') mediaRecorder.stop();
+    console.log('[Recorder] stopRecording called. Current state:', mediaRecorder?.state);
+
+    // Clear any existing timeout just in case
+    if (stopTimeout) clearTimeout(stopTimeout);
+
+    if (mediaRecorder && mediaRecorder.state !== 'inactive') {
+        try {
+            mediaRecorder.stop();
+            // Fallback: If onstop doesn't fire in 1s, force cleanup
+            stopTimeout = setTimeout(() => {
+                console.warn('[Recorder] onstop timed out. Forcing finishRecording.');
+                finishRecording();
+            }, 1000);
+        } catch (err) {
+            console.error('[Recorder] Failed to call mediaRecorder.stop():', err);
+            finishRecording();
+        }
+    } else {
+        console.log('[Recorder] Recorder already inactive, forcing finish logic.');
+        finishRecording();
+    }
+}
+
+function finishRecording() {
+    console.log('[Recorder] finishRecording called');
+    if (stopTimeout) {
+        clearTimeout(stopTimeout);
+        stopTimeout = null;
+    }
+
     _stopStreams();
+
+    // Construct blob if we have data
+    if (recordedChunks.length > 0 && onStopCallback) {
+        const blob = new Blob(recordedChunks, { type: recordedMimeType });
+        console.log('[Recorder] Created blob size:', blob.size);
+        onStopCallback(blob, recordedMimeType);
+
+        // Clear callback to prevent double firing
+        onStopCallback = null;
+    } else {
+        console.warn('[Recorder] No chunks recorded or callback missing');
+    }
 }
 
 export function pauseRecording() {
@@ -92,7 +171,10 @@ export function resumeRecording() {
 }
 
 function _stopStreams() {
-    [screenStream, micStream].forEach((s) => s?.getTracks().forEach((t) => t.stop()));
+    console.log('[Recorder] _stopStreams called');
+    [screenStream, micStream].forEach((s) => s?.getTracks()?.forEach((t) => t.stop()));
+
     screenStream = null;
     micStream = null;
+    mediaRecorder = null; // Clear recorder ref
 }
