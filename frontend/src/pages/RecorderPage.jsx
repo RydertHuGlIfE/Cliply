@@ -1,0 +1,233 @@
+import { useState, useEffect, useRef, useCallback } from 'react'
+import Header from '../components/Header'
+import StepIndicator from '../components/StepIndicator'
+import SetupPanel from '../components/SetupPanel'
+import RecordingPanel from '../components/RecordingPanel'
+import PreviewPanel from '../components/PreviewPanel'
+import UploadPanel from '../components/UploadPanel'
+import SharePanel from '../components/SharePanel'
+import { startRecording, stopRecording, pauseRecording, resumeRecording } from '../modules/recorder'
+import { uploadBlob } from '../modules/uploader'
+
+// State machine: setup → recording → preview → uploading → share
+const STEPS = { SETUP: 1, RECORDING: 2, PREVIEW: 2, UPLOADING: 3, SHARE: 3 }
+const STEP_NUM = { setup: 1, recording: 2, preview: 2, uploading: 3, share: 3 }
+
+function showToast(message, type = 'info') {
+    const existing = document.querySelector('.toast')
+    if (existing) existing.remove()
+    const icons = { success: '✅', error: '❌', info: '💡' }
+    const toast = document.createElement('div')
+    toast.className = `toast toast-${type}`
+    toast.innerHTML = `<span>${icons[type] || '💡'}</span><span>${message}</span>`
+    document.body.appendChild(toast)
+    setTimeout(() => {
+        toast.style.opacity = '0'
+        toast.style.transform = 'translateX(40px)'
+        toast.style.transition = 'all 0.3s ease'
+        setTimeout(() => toast.remove(), 300)
+    }, 3500)
+}
+
+export default function RecorderPage() {
+    const [phase, setPhase] = useState('setup') // setup | recording | preview | uploading | share
+    const [isPaused, setIsPaused] = useState(false)
+    const [elapsed, setElapsed] = useState(0)
+    const [blobUrl, setBlobUrl] = useState(null)
+    const [blob, setBlob] = useState(null)
+    const [uploadProgress, setUploadProgress] = useState(0)
+    const [uploadLoaded, setUploadLoaded] = useState(0)
+    const [uploadTotal, setUploadTotal] = useState(0)
+    const [shareUrl, setShareUrl] = useState('')
+
+    const timerRef = useRef(null)
+
+    const startTimer = () => {
+        setElapsed(0)
+        timerRef.current = setInterval(() => {
+            setElapsed(e => e + 1)
+        }, 1000)
+    }
+
+    const stopTimer = () => {
+        clearInterval(timerRef.current)
+        timerRef.current = null
+    }
+
+    useEffect(() => () => stopTimer(), [])
+
+    const statusMap = {
+        setup: { label: 'Ready', type: 'idle' },
+        recording: { label: 'Recording', type: 'recording' },
+        preview: { label: 'Preview', type: 'idle' },
+        uploading: { label: 'Uploading', type: 'idle' },
+        share: { label: 'Shared!', type: 'ready' },
+    }
+
+    const handleStart = useCallback(async ({ useMic, useSystemAudio }) => {
+        const result = await startRecording({
+            useMic,
+            useSystemAudio,
+            onChunk: () => { },
+            onStop: (recordedBlob) => {
+                const url = URL.createObjectURL(recordedBlob)
+                setBlobUrl(url)
+                setBlob(recordedBlob)
+                stopTimer()
+                setPhase('preview')
+            },
+            onError: (err) => {
+                stopTimer()
+                setPhase('setup')
+                if (err.name === 'NotAllowedError') {
+                    showToast('Screen capture permission denied', 'error')
+                } else {
+                    showToast(`Error: ${err.message}`, 'error')
+                }
+            },
+        })
+        if (result) {
+            setPhase('recording')
+            setIsPaused(false)
+            startTimer()
+        }
+    }, [])
+
+    const handleStop = useCallback(() => {
+        stopRecording()
+        stopTimer()
+    }, [])
+
+    const handlePause = useCallback(() => {
+        if (isPaused) {
+            resumeRecording()
+            setIsPaused(false)
+            timerRef.current = setInterval(() => setElapsed(e => e + 1), 1000)
+        } else {
+            pauseRecording()
+            setIsPaused(true)
+            clearInterval(timerRef.current)
+        }
+    }, [isPaused])
+
+    const handleCancel = useCallback(() => {
+        stopRecording()
+        stopTimer()
+        setPhase('setup')
+        setElapsed(0)
+        setIsPaused(false)
+    }, [])
+
+    const handleUpload = useCallback(async () => {
+        if (!blob) return
+        setPhase('uploading')
+        setUploadProgress(0)
+        try {
+            const result = await uploadBlob(blob, {
+                onProgress: (pct, loaded, total) => {
+                    setUploadProgress(pct)
+                    setUploadLoaded(loaded)
+                    setUploadTotal(total)
+                },
+            })
+            setShareUrl(result.shareUrl)
+            setPhase('share')
+            showToast('Recording uploaded successfully!', 'success')
+        } catch (err) {
+            showToast(`Upload failed: ${err.message}`, 'error')
+            setPhase('preview')
+        }
+    }, [blob])
+
+    const handleReRecord = useCallback(() => {
+        if (blobUrl) URL.revokeObjectURL(blobUrl)
+        setBlobUrl(null)
+        setBlob(null)
+        setPhase('setup')
+    }, [blobUrl])
+
+    const handleNewRecording = useCallback(() => {
+        if (blobUrl) URL.revokeObjectURL(blobUrl)
+        setBlobUrl(null)
+        setBlob(null)
+        setShareUrl('')
+        setPhase('setup')
+    }, [blobUrl])
+
+    return (
+        <div>
+            <Header status={statusMap[phase]} />
+            <main>
+                <div className="container">
+                    {/* Hero */}
+                    <section style={{ padding: '64px 0 40px', textAlign: 'center' }}>
+                        <div style={{
+                            display: 'inline-flex', alignItems: 'center', gap: 8,
+                            padding: '6px 14px', background: 'rgba(139,92,246,0.1)',
+                            border: '1px solid rgba(139,92,246,0.25)', borderRadius: 20,
+                            fontSize: 13, fontWeight: 500, color: 'var(--accent-purple)', marginBottom: 24
+                        }}>
+                            ✨ No installation required
+                        </div>
+                        <h1 style={{ fontSize: 'clamp(36px,6vw,56px)', fontWeight: 800, lineHeight: 1.1, letterSpacing: '-1.5px', marginBottom: 16 }}>
+                            Record. Share.{' '}
+                            <span style={{ background: 'var(--gradient)', WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent', backgroundClip: 'text' }}>
+                                Instantly.
+                            </span>
+                        </h1>
+                        <p style={{ fontSize: 18, color: 'var(--text-secondary)', maxWidth: 480, margin: '0 auto 40px', lineHeight: 1.7 }}>
+                            Capture your screen with audio in one click. Get a shareable link in seconds.
+                        </p>
+                    </section>
+
+                    <div style={{ maxWidth: 680, margin: '0 auto' }}>
+                        <StepIndicator current={STEP_NUM[phase]} />
+
+                        {phase === 'setup' && <SetupPanel onStart={handleStart} />}
+                        {phase === 'recording' && (
+                            <RecordingPanel
+                                elapsed={elapsed}
+                                isPaused={isPaused}
+                                onStop={handleStop}
+                                onPause={handlePause}
+                                onCancel={handleCancel}
+                            />
+                        )}
+                        {phase === 'preview' && (
+                            <PreviewPanel blobUrl={blobUrl} onUpload={handleUpload} onReRecord={handleReRecord} />
+                        )}
+                        {phase === 'uploading' && (
+                            <UploadPanel progress={uploadProgress} loaded={uploadLoaded} total={uploadTotal} />
+                        )}
+                        {phase === 'share' && (
+                            <SharePanel shareUrl={shareUrl} onNewRecording={handleNewRecording} />
+                        )}
+                    </div>
+
+                    {/* How it works */}
+                    <div style={{ maxWidth: 680, margin: '48px auto 0' }}>
+                        <p className="section-title text-center mb-24">How it works</p>
+                        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3,1fr)', gap: 16 }}>
+                            {[
+                                { icon: '🖥️', title: 'Select Screen', desc: 'Choose any screen, window, or browser tab' },
+                                { icon: '⚡', title: 'Instant Upload', desc: 'Recording uploads automatically when done' },
+                                { icon: '🔗', title: 'Share Link', desc: 'One-click copy of your shareable link' },
+                            ].map(({ icon, title, desc }) => (
+                                <div key={title} className="card text-center" style={{ padding: '20px 16px' }}>
+                                    <div style={{ fontSize: 28, marginBottom: 10 }}>{icon}</div>
+                                    <div style={{ fontSize: 14, fontWeight: 600, marginBottom: 6 }}>{title}</div>
+                                    <div style={{ fontSize: 12, color: 'var(--text-secondary)' }}>{desc}</div>
+                                </div>
+                            ))}
+                        </div>
+                    </div>
+                </div>
+            </main>
+            <footer className="footer">
+                <div className="container">
+                    <p>Built with ❤️ using the Web Screen Capture API</p>
+                </div>
+            </footer>
+        </div>
+    )
+}
