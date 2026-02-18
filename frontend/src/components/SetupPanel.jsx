@@ -28,6 +28,19 @@ export default function SetupPanel({ onStart }) {
                 </label>
             </div>
 
+            {useSystemAudio && navigator.userAgent.includes('Linux') && (
+                <div className="hint-box mb-24" style={{
+                    background: 'rgba(234, 179, 8, 0.1)',
+                    border: '1px solid rgba(234, 179, 8, 0.2)',
+                    borderRadius: 8,
+                    padding: '8px 12px',
+                    fontSize: 13,
+                    color: '#eab308'
+                }}>
+                    ℹ️ <b>Linux Tip:</b> "Entire Screen" sharing often forces silence. Share a <b>Browser Tab</b> for reliable audio.
+                </div>
+            )}
+
             <div className="text-center">
                 <button
                     className="btn btn-primary btn-lg"

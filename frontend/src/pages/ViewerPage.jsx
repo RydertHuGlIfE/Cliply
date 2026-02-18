@@ -9,6 +9,13 @@ function formatBytes(bytes) {
     return `${(bytes / 1024 / 1024).toFixed(1)} MB`
 }
 
+function formatTime(seconds) {
+    if (seconds <= 0) return 'Expired'
+    const m = Math.floor(seconds / 60)
+    const s = seconds % 60
+    return `${m}:${s.toString().padStart(2, '0')}`
+}
+
 function showToast(message, type = 'info') {
     const existing = document.querySelector('.toast')
     if (existing) existing.remove()
@@ -30,6 +37,10 @@ export default function ViewerPage() {
     const [status, setStatus] = useState('loading') // loading | ready | notfound
     const [info, setInfo] = useState(null)
     const [copied, setCopied] = useState(false)
+    const [password, setPassword] = useState('')
+    const [token, setToken] = useState(null)
+    const [error, setError] = useState(null)
+    const [ttl, setTtl] = useState(null)
     const inputRef = useRef(null)
 
     const shareUrl = window.location.href
@@ -38,14 +49,57 @@ export default function ViewerPage() {
         if (!id) { setStatus('notfound'); return }
         document.title = `SnapRec — Recording ${id.slice(0, 8)}`
 
+        let interval;
         fetch(`/api/video/${id}/info`)
             .then(r => {
                 if (!r.ok) throw new Error('not found')
                 return r.json()
             })
-            .then(data => { setInfo(data); setStatus('ready') })
+            .then(data => {
+                setInfo(data);
+                setStatus('ready');
+                if (data.ttl) {
+                    setTtl(data.ttl);
+                    interval = setInterval(() => {
+                        setTtl(t => {
+                            if (t <= 1) {
+                                clearInterval(interval);
+                                setStatus('notfound'); // Expired!
+                                return 0;
+                            }
+                            return t - 1;
+                        });
+                    }, 1000);
+                }
+            })
             .catch(() => setStatus('notfound'))
+
+        return () => clearfix(interval);
+
+        function clearfix(videoInterval) {
+            if (videoInterval) clearInterval(videoInterval);
+        }
     }, [id])
+
+    const handleVerify = async (e) => {
+        e.preventDefault();
+        setError(null);
+        try {
+            const res = await fetch(`/api/video/${id}/verify`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ password })
+            });
+            const data = await res.json();
+            if (res.ok && data.success) {
+                setToken(data.token);
+            } else {
+                setError(data.error || 'Incorrect password');
+            }
+        } catch (err) {
+            setError('Verification failed');
+        }
+    }
 
     const copyLink = () => {
         navigator.clipboard.writeText(shareUrl).then(() => {
@@ -89,43 +143,73 @@ export default function ViewerPage() {
 
                     {status === 'ready' && (
                         <div className="animate-in">
-                            <VideoPlayer videoId={id} />
+                            {!token ? (
+                                <div className="card" style={{ maxWidth: 400, margin: '40px auto', textAlign: 'center', padding: 40 }}>
+                                    <div style={{ fontSize: 48, marginBottom: 16 }}>🔒</div>
+                                    <h2 style={{ fontSize: 24, fontWeight: 700, marginBottom: 8 }}>Password Protected</h2>
+                                    <p className="text-secondary mb-24">
+                                        Enter the password to view this recording.<br />
+                                        {ttl !== null && (
+                                            <span style={{ fontSize: 13, color: '#eab308' }}>
+                                                Time remaining: {formatTime(ttl)}
+                                            </span>
+                                        )}
+                                    </p>
+                                    <form onSubmit={handleVerify}>
+                                        <input
+                                            type="text"
+                                            className="share-link-input mb-16"
+                                            placeholder="Enter password..."
+                                            value={password}
+                                            onChange={e => setPassword(e.target.value)}
+                                            style={{ textAlign: 'center', fontWeight: 'bold', letterSpacing: 1 }}
+                                            autoFocus
+                                        />
+                                        {error && <div className="text-danger mb-16" style={{ fontSize: 14 }}>{error}</div>}
+                                        <button type="submit" className="btn btn-primary w-full">Unlock Recording</button>
+                                    </form>
+                                </div>
+                            ) : (
+                                <>
+                                    <VideoPlayer videoId={id} token={token} />
 
-                            {/* Info bar */}
-                            <div className="flex justify-between items-center flex-wrap gap-12 mt-24">
-                                <div className="flex items-center gap-16 flex-wrap">
-                                    <div className="flex items-center gap-8" style={{ fontSize: 13, color: 'var(--text-secondary)' }}>
-                                        🎬 <strong style={{ fontFamily: 'monospace', fontSize: 12, color: 'var(--text-primary)' }}>{id}</strong>
+                                    {/* Info bar */}
+                                    <div className="flex justify-between items-center flex-wrap gap-12 mt-24">
+                                        <div className="flex items-center gap-16 flex-wrap">
+                                            <div className="flex items-center gap-8" style={{ fontSize: 13, color: 'var(--text-secondary)' }}>
+                                                🎬 <strong style={{ fontFamily: 'monospace', fontSize: 12, color: 'var(--text-primary)' }}>{id}</strong>
+                                            </div>
+                                            {info?.size && (
+                                                <div className="flex items-center gap-8" style={{ fontSize: 13, color: 'var(--text-secondary)' }}>
+                                                    💾 <strong style={{ color: 'var(--text-primary)' }}>{formatBytes(info.size)}</strong>
+                                                </div>
+                                            )}
+                                            {ttl !== null && (
+                                                <div className="flex items-center gap-8" style={{ fontSize: 13, color: 'var(--text-secondary)' }}>
+                                                    ⏳ <strong style={{ color: '#eab308' }}>{formatTime(ttl)}</strong>
+                                                </div>
+                                            )}
+                                        </div>
+                                        <a href={`/video/${id}?token=${token}`} download={`snaprec-${id}.webm`} className="btn btn-download btn-sm">
+                                            ⬇ Download
+                                        </a>
                                     </div>
-                                    {info?.size && (
-                                        <div className="flex items-center gap-8" style={{ fontSize: 13, color: 'var(--text-secondary)' }}>
-                                            💾 <strong style={{ color: 'var(--text-primary)' }}>{formatBytes(info.size)}</strong>
-                                        </div>
-                                    )}
-                                    {info?.created && (
-                                        <div className="flex items-center gap-8" style={{ fontSize: 13, color: 'var(--text-secondary)' }}>
-                                            🕐 <strong style={{ color: 'var(--text-primary)' }}>{new Date(info.created).toLocaleString()}</strong>
-                                        </div>
-                                    )}
-                                </div>
-                                <a href={`/video/${id}`} download={`snaprec-${id}.webm`} className="btn btn-download btn-sm">
-                                    ⬇ Download
-                                </a>
-                            </div>
 
-                            {/* Share box */}
-                            <div className="card mt-24">
-                                <p className="section-title mb-12">Share this recording</p>
-                                <div className="share-link-box">
-                                    <input ref={inputRef} type="text" className="share-link-input" value={shareUrl} readOnly />
-                                    <button
-                                        className={`btn btn-sm ${copied ? 'btn-success' : 'btn-primary'}`}
-                                        onClick={copyLink}
-                                    >
-                                        {copied ? '✅ Copied!' : '📋 Copy'}
-                                    </button>
-                                </div>
-                            </div>
+                                    {/* Share box */}
+                                    <div className="card mt-24">
+                                        <p className="section-title mb-12">Share this recording</p>
+                                        <div className="share-link-box">
+                                            <input ref={inputRef} type="text" className="share-link-input" value={shareUrl} readOnly />
+                                            <button
+                                                className={`btn btn-sm ${copied ? 'btn-success' : 'btn-primary'}`}
+                                                onClick={copyLink}
+                                            >
+                                                {copied ? '✅ Copied!' : '📋 Copy'}
+                                            </button>
+                                        </div>
+                                    </div>
+                                </>
+                            )}
                         </div>
                     )}
 

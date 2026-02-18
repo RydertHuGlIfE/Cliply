@@ -44,7 +44,7 @@ export async function startRecording({ useMic, useSystemAudio, onChunk, onStop, 
                 echoCancellation: false,
                 noiseSuppression: false,
                 autoGainControl: false,
-                sampleRate: 44100,
+                // sampleRate: 44100, // Let browser decide to avoid mismatch
             } : false,
         };
         console.log('[Recorder] Requesting DisplayMedia with:', displayMediaConstraints);
@@ -52,6 +52,7 @@ export async function startRecording({ useMic, useSystemAudio, onChunk, onStop, 
 
         const audioTracks = [...(screenStream.getAudioTracks())];
         console.log('[Recorder] screenStream tracks:', screenStream.getTracks());
+        audioTracks.forEach(t => console.log('[Recorder] audio track settings:', t.getSettings()));
 
         if (useMic) {
             try {
@@ -64,16 +65,51 @@ export async function startRecording({ useMic, useSystemAudio, onChunk, onStop, 
         }
 
         let finalStream;
-        if (audioTracks.length > 1) {
+        if (audioTracks.length > 0) {
             const ctx = new AudioContext();
             const dest = ctx.createMediaStreamDestination();
+
+            // Keep references to prevent GC?
+            window._audioContext = ctx;
+
             audioTracks.forEach((track) => {
-                ctx.createMediaStreamSource(new MediaStream([track])).connect(dest);
+                const source = ctx.createMediaStreamSource(new MediaStream([track]));
+                const gainNode = ctx.createGain(); // Use gain node to ensure flow
+                gainNode.gain.value = 1.0;
+                source.connect(gainNode);
+                gainNode.connect(dest);
+
+                // Force graph activity by connecting to destination (muted)
+                const silentGain = ctx.createGain();
+                silentGain.gain.value = 0; // Muted to prevent echo
+                source.connect(silentGain);
+                silentGain.connect(ctx.destination);
+
+                console.log(`[Recorder] Connected track ${track.id} to AudioContext (and loopback). Muted: ${track.muted}, Enabled: ${track.enabled}`);
             });
+
+            if (ctx.state === 'suspended') {
+                console.log('[Recorder] AudioContext suspended, resizing...');
+                await ctx.resume();
+            }
+
+            // Comfort Noise: Add a tiny bit of noise to keep the encoder/context alive
+            // System audio is often silent/sporadic, which can cause MediaRecorder to stall.
+            // A continuous low-level signal ensures the audio track has data.
+            const oscillator = ctx.createOscillator();
+            const comfortGain = ctx.createGain();
+            comfortGain.gain.value = 0.001; // Inaudible (-60dB) but present
+            oscillator.connect(comfortGain);
+            comfortGain.connect(dest);
+            oscillator.start();
+            console.log('[Recorder] Added comfort noise generator.');
+
+            console.log('[Recorder] AudioContext state:', ctx.state);
+
             finalStream = new MediaStream([...screenStream.getVideoTracks(), ...dest.stream.getAudioTracks()]);
         } else {
-            finalStream = new MediaStream([...screenStream.getVideoTracks(), ...audioTracks]);
-            finalStream = new MediaStream([...screenStream.getVideoTracks(), ...audioTracks]);
+            // Video only
+            finalStream = new MediaStream([...screenStream.getVideoTracks()]);
         }
 
         const hasAudio = finalStream.getAudioTracks().length > 0;

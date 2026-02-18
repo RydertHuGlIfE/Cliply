@@ -39,6 +39,7 @@ export default function RecorderPage() {
     const [uploadLoaded, setUploadLoaded] = useState(0)
     const [uploadTotal, setUploadTotal] = useState(0)
     const [shareUrl, setShareUrl] = useState('')
+    const [sharePassword, setSharePassword] = useState('')
 
     const timerRef = useRef(null)
 
@@ -134,6 +135,7 @@ export default function RecorderPage() {
                 },
             })
             setShareUrl(result.shareUrl)
+            setSharePassword(result.password)
             setPhase('share')
             showToast('Recording uploaded successfully!', 'success')
         } catch (err) {
@@ -154,6 +156,7 @@ export default function RecorderPage() {
         setBlobUrl(null)
         setBlob(null)
         setShareUrl('')
+        setSharePassword('')
         setPhase('setup')
     }, [blobUrl])
 
@@ -203,7 +206,7 @@ export default function RecorderPage() {
                             <UploadPanel progress={uploadProgress} loaded={uploadLoaded} total={uploadTotal} />
                         )}
                         {phase === 'share' && (
-                            <SharePanel shareUrl={shareUrl} onNewRecording={handleNewRecording} />
+                            <SharePanel shareUrl={shareUrl} password={sharePassword} onNewRecording={handleNewRecording} />
                         )}
                     </div>
 

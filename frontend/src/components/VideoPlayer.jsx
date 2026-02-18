@@ -1,6 +1,6 @@
 import { useRef, useEffect, useState } from 'react'
 
-export default function VideoPlayer({ videoId }) {
+export default function VideoPlayer({ videoId, token }) {
     const videoRef = useRef(null)
     const [buffering, setBuffering] = useState(true)
     const [error, setError] = useState(false)
@@ -28,7 +28,7 @@ export default function VideoPlayer({ videoId }) {
         <div className="video-container">
             <video
                 ref={videoRef}
-                src={`/video/${videoId}`}
+                src={token ? `/video/${videoId}?token=${token}` : undefined}
                 controls
                 preload="metadata"
                 playsInline
