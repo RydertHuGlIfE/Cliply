@@ -79,16 +79,18 @@ const Hero = ({ onStartRecording }) => {
                 </div>
             </div>
 
-            <div className="absolute bottom-0 w-full bg-[#ccfa00] overflow-hidden py-2 whitespace-nowrap">
-                <div className="animate-[marquee_10s_linear_infinite] font-black text-black text-2xl italic inline-block">
+            <div className="absolute bottom-0 w-full bg-[#ccfa00] overflow-hidden py-2 flex">
+                <div className="animate-[marquee_20s_linear_infinite] font-black text-black text-2xl italic whitespace-nowrap flex-shrink-0 px-4">
                     RECORD EVERYTHING // SHARE INSTANTLY // NO LIMITS // RECORD EVERYTHING // SHARE INSTANTLY // NO LIMITS //
+                </div>
+                <div className="animate-[marquee_20s_linear_infinite] font-black text-black text-2xl italic whitespace-nowrap flex-shrink-0 px-4">
                     RECORD EVERYTHING // SHARE INSTANTLY // NO LIMITS // RECORD EVERYTHING // SHARE INSTANTLY // NO LIMITS //
                 </div>
             </div>
             <style>{`
         @keyframes marquee {
             0% { transform: translateX(0); }
-            100% { transform: translateX(-50%); }
+            100% { transform: translateX(-100%); }
         }
       `}</style>
         </section>
