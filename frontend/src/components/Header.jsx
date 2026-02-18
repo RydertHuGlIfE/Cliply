@@ -7,7 +7,7 @@ export default function Header({ rightSlot, status }) {
                 <div className="header-inner">
                     <Link to="/" className="logo">
                         <div className="logo-icon">🎬</div>
-                        <span className="logo-text">SnapRec</span>
+                        <span className="logo-text">Cliply</span>
                     </Link>
                     <div className="flex items-center gap-12">
                         {status && (
