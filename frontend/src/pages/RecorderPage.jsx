@@ -6,6 +6,7 @@ import RecordingPanel from '../components/RecordingPanel'
 import PreviewPanel from '../components/PreviewPanel'
 import UploadPanel from '../components/UploadPanel'
 import SharePanel from '../components/SharePanel'
+import WebcamOverlay from '../components/WebcamOverlay'
 import { startRecording, stopRecording, pauseRecording, resumeRecording } from '../modules/recorder'
 import { uploadBlob } from '../modules/uploader'
 
@@ -40,6 +41,7 @@ export default function RecorderPage() {
     const [uploadTotal, setUploadTotal] = useState(0)
     const [shareUrl, setShareUrl] = useState('')
     const [sharePassword, setSharePassword] = useState('')
+    const [useWebcam, setUseWebcam] = useState(false)
 
     const timerRef = useRef(null)
 
@@ -65,35 +67,43 @@ export default function RecorderPage() {
         share: { label: 'Shared!', type: 'ready' },
     }
 
-    const handleStart = useCallback(async ({ useMic, useSystemAudio }) => {
-        const result = await startRecording({
-            useMic,
-            useSystemAudio,
-            onChunk: () => { },
-            onStop: (recordedBlob) => {
-                const url = URL.createObjectURL(recordedBlob)
-                setBlobUrl(url)
-                setBlob(recordedBlob)
-                stopTimer()
-                setPhase('preview')
-            },
-            onError: (err) => {
-                stopTimer()
-                setPhase('setup')
-                if (err.name === 'NotAllowedError') {
-                    showToast('Screen capture permission denied', 'error')
-                } else {
-                    showToast(`Error: ${err.message}`, 'error')
+    const handleStart = useCallback(async (options) => {
+        // options: { useMic, useSystemAudio, useWebcam }
+        setUseWebcam(!!options.useWebcam)
+        try {
+            const result = await startRecording({
+                useMic: options.useMic,
+                useSystemAudio: options.useSystemAudio,
+                onChunk: () => { },
+                onStop: (recordedBlob) => {
+                    const url = URL.createObjectURL(recordedBlob)
+                    setBlobUrl(url)
+                    setBlob(recordedBlob)
+                    stopTimer()
+                    setPhase('preview')
+                },
+                onError: (err) => {
+                    stopTimer()
+                    setPhase('setup')
+                    if (err.name === 'NotAllowedError') {
+                        showToast('Screen capture permission denied', 'error')
+                    } else {
+                        showToast(`Error: ${err.message}`, 'error')
+                    }
+                },
+            })
+
+            if (result) {
+                setPhase('recording')
+                setIsPaused(false)
+                startTimer()
+                if (result.warning === 'system_audio_missing') {
+                    showToast('System audio missing. Try sharing a "Tab" instead of "Entire Screen".', 'error')
                 }
-            },
-        })
-        if (result) {
-            setPhase('recording')
-            setIsPaused(false)
-            startTimer()
-            if (result.warning === 'system_audio_missing') {
-                showToast('System audio missing. Try sharing a "Tab" instead of "Entire Screen".', 'error')
             }
+        } catch (err) {
+            console.error("Failed to start recording", err)
+            showToast("Failed to start recording", 'error')
         }
     }, [])
 
@@ -120,6 +130,7 @@ export default function RecorderPage() {
         setPhase('setup')
         setElapsed(0)
         setIsPaused(false)
+        setUseWebcam(false)
     }, [])
 
     const handleUpload = useCallback(async () => {
@@ -148,6 +159,7 @@ export default function RecorderPage() {
         if (blobUrl) URL.revokeObjectURL(blobUrl)
         setBlobUrl(null)
         setBlob(null)
+        setUseWebcam(false)
         setPhase('setup')
     }, [blobUrl])
 
@@ -157,6 +169,7 @@ export default function RecorderPage() {
         setBlob(null)
         setShareUrl('')
         setSharePassword('')
+        setUseWebcam(false)
         setPhase('setup')
     }, [blobUrl])
 
@@ -164,6 +177,7 @@ export default function RecorderPage() {
 
     return (
         <div>
+            <WebcamOverlay visible={phase === 'recording' && useWebcam} />
             <Header status={statusMap[phase]} />
             <main>
                 <div className="container">
@@ -171,9 +185,9 @@ export default function RecorderPage() {
                     {isSetup ? (
                         <section className="hero-section-centered animate-in" id="features">
                             {/* <div className="hero-status-pill">
-                                <span className="hero-status-dot" />
-                                System Operational
-                            </div> */}
+                                    <span className="hero-status-dot" />
+                                    System Operational
+                                </div> */}
                             <h1 className="hero-headline">
                                 Record. Share.{' '}
                                 <span className="accent">Instantly.</span>
@@ -184,13 +198,13 @@ export default function RecorderPage() {
                             <div className="hero-actions" style={{ justifyContent: 'center' }}>
                                 <button
                                     className="btn btn-primary btn-lg"
-                                    onClick={() => handleStart({ useMic: true, useSystemAudio: true })}
+                                    onClick={() => document.getElementById('recorder-panel')?.scrollIntoView({ behavior: 'smooth' })}
                                 >
                                     🔴 Start Recording
                                 </button>
-                                <button href="#how-it-works" className="btn btn-secondary btn-lg" onClick={() => document.getElementById('recorder-panel')?.scrollIntoView({ behavior: 'smooth' })}>
+                                <a href="#how-it-works" className="btn btn-secondary btn-lg">
                                     How it works
-                                </button>
+                                </a>
                             </div>
                         </section>
                     ) : (

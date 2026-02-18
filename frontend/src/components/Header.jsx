@@ -6,8 +6,10 @@ export default function Header({ rightSlot, status }) {
             <div className="container">
                 <div className="header-inner">
                     <Link to="/" className="logo">
-                        <div className="logo-icon">🎬</div>
-                        <span className="logo-text">Cliply</span>
+                        <div className="logo-icon">
+                            <img src="logo2.png" height="100" alt="" />
+                        </div>
+                        {/* <span className="logo-text">Cliply</span> */}
                     </Link>
 
                     <nav className="header-nav">

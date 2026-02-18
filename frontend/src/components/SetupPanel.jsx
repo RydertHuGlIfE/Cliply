@@ -3,6 +3,7 @@ import { useState } from 'react'
 export default function SetupPanel({ onStart }) {
     const [useMic, setUseMic] = useState(true)
     const [useSystemAudio, setUseSystemAudio] = useState(false)
+    const [useWebcam, setUseWebcam] = useState(false)
 
     return (
         <div className="card animate-in">
@@ -26,6 +27,14 @@ export default function SetupPanel({ onStart }) {
                         <div className="toggle-label-desc">Capture tab/app audio</div>
                     </div>
                 </label>
+
+                <label className="toggle-group" onClick={() => setUseWebcam(v => !v)}>
+                    <div className={`toggle-switch ${useWebcam ? 'on' : ''}`} />
+                    <div>
+                        <div className="toggle-label-title">📷 Webcam</div>
+                        <div className="toggle-label-desc">Show face cam overlay</div>
+                    </div>
+                </label>
             </div>
 
             {useSystemAudio && navigator.userAgent.includes('Linux') && (
@@ -44,7 +53,7 @@ export default function SetupPanel({ onStart }) {
             <div className="text-center">
                 <button
                     className="btn btn-primary btn-lg"
-                    onClick={() => onStart({ useMic, useSystemAudio })}
+                    onClick={() => onStart({ useMic, useSystemAudio, useWebcam })}
                 >
                     🔴 Start Recording
                 </button>
